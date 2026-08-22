@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm run build --workspace=@midnight-ntwrk/bboard-ui",
+  "outputDirectory": "bboard-ui/dist",
+  "installCommand": "npm install",
+  "framework": null
+}
