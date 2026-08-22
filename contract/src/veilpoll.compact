@@ -1,0 +1,49 @@
+// veilpoll.compact — VeilPoll Wave1 minimal (derived from example-bboard bboard.compact)
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+
+export enum PollState { OPEN, CLOSED }
+export enum PollOption { A, B, C, D }
+
+export ledger state: PollState;
+export ledger question: Maybe<Opaque<"string">>;
+export ledger tallyA: Counter;
+export ledger tallyB: Counter;
+export ledger tallyC: Counter;
+export ledger tallyD: Counter;
+export ledger totalVotes: Counter;
+export ledger owner: Bytes<32>;
+export ledger sequence: Counter;
+
+constructor(initialQuestion: Opaque<"string">) {
+  state = PollState.OPEN;
+  question = disclose(some<Opaque<"string">>(initialQuestion));
+  sequence.increment(1);
+}
+
+witness localSecretKey(): Bytes<32>;
+
+export circuit publicKey(sk: Bytes<32>, seq: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "veilpoll:pk:"), seq, sk]);
+}
+
+export circuit vote(choice: PollOption): [] {
+  assert(state == PollState.OPEN, "poll closed");
+  if (disclose(choice == PollOption.A)) { tallyA.increment(1); }
+  if (disclose(choice == PollOption.B)) { tallyB.increment(1); }
+  if (disclose(choice == PollOption.C)) { tallyC.increment(1); }
+  if (disclose(choice == PollOption.D)) { tallyD.increment(1); }
+  totalVotes.increment(1);
+}
+
+export circuit close(): [] {
+  assert(state == PollState.OPEN, "already closed");
+  assert(owner == publicKey(localSecretKey(), sequence as Field as Bytes<32>), "not owner");
+  state = PollState.CLOSED;
+  sequence.increment(1);
+}
+
+export circuit getTally(): Vector<4, Field> {
+  return [tallyA as Field, tallyB as Field, tallyC as Field, tallyD as Field];
+}
